@@ -1,0 +1,1158 @@
+<!DOCTYPE html>
+<html lang="ar" dir="ltr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>فلاش كاردز - مشاركة ونسخ احتياطي</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.128.0/build/three.module.js"
+            }
+        }
+    </script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #050b15;
+            min-height: 100vh;
+            color: #eef5ff;
+            overflow-x: hidden;
+        }
+        #canvas-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            pointer-events: none;
+        }
+        .app-container {
+            position: relative;
+            z-index: 10;
+            min-height: 100vh;
+            padding: 2rem 1.5rem;
+            backdrop-filter: blur(2px);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+        }
+        .quiz-card, .manage-section, .stats-section {
+            max-width: 850px;
+            width: 100%;
+            background: rgba(12, 20, 30, 0.75);
+            backdrop-filter: blur(14px);
+            border-radius: 2rem;
+            border: 1px solid rgba(0, 255, 255, 0.35);
+            box-shadow: 0 25px 45px rgba(0, 0, 0, 0.5), 0 0 25px rgba(0, 200, 255, 0.2);
+            padding: 1.8rem;
+            margin-bottom: 2rem;
+        }
+        .quiz-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            border-bottom: 1px solid rgba(0, 255, 255, 0.3);
+            padding-bottom: 0.75rem;
+            margin-bottom: 1.5rem;
+        }
+        .title {
+            margin-top: 0.25rem;
+            margin-bottom: 0.75rem;
+        }
+        .title h1 {
+            font-size: 1.6rem;
+            background: linear-gradient(135deg, #aaffff, #b77eff);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+        .decks-area {
+            display: flex;
+            gap: 0.8rem;
+            align-items: center;
+            flex-wrap: wrap;
+            margin-bottom: 1rem;
+        }
+        .deck-select {
+            background: rgba(0,0,0,0.6);
+            border: 1px solid cyan;
+            border-radius: 2rem;
+            padding: 0.4rem 1rem;
+            color: white;
+            font-family: inherit;
+        }
+        .deck-btn {
+            background: rgba(0,0,0,0.5);
+            border: none;
+            color: #0ff;
+            padding: 0.3rem 0.8rem;
+            border-radius: 2rem;
+            cursor: pointer;
+            font-size: 0.8rem;
+        }
+        .header-actions {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+        .sound-toggle, .mistakes-toggle, .quiz-mode-btn {
+            background: rgba(0,0,0,0.5);
+            border: none;
+            color: #0ff;
+            font-size: 1rem;
+            cursor: pointer;
+            padding: 0.3rem 0.7rem;
+            border-radius: 2rem;
+            transition: 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .mistakes-toggle.active {
+            background: #a33;
+            box-shadow: 0 0 8px #ff6666;
+            color: white;
+        }
+        .quiz-mode-btn.quiz-active {
+            background: #4a6;
+            color: white;
+        }
+        .stats {
+            background: rgba(0,0,0,0.5);
+            padding: 0.4rem 1rem;
+            border-radius: 40px;
+            font-weight: 600;
+        }
+        .progress-area {
+            margin: 1rem 0 1.8rem;
+        }
+        .progress-text {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.8rem;
+            margin-bottom: 0.4rem;
+        }
+        .progress-bar-bg {
+            width: 100%;
+            height: 6px;
+            background: rgba(255,255,255,0.15);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        .progress-fill {
+            width: 0%;
+            height: 100%;
+            background: linear-gradient(90deg, #0ff, #a36eff);
+            transition: width 0.3s ease;
+        }
+        .question-container {
+            background: rgba(0, 0, 0, 0.4);
+            border-radius: 1.5rem;
+            padding: 0.2rem;
+            margin: 1rem 0 1.5rem;
+            border: 1px solid rgba(0, 255, 255, 0.2);
+        }
+        .question-text {
+            font-size: 1.7rem;
+            font-weight: 600;
+            line-height: 1.4;
+            padding: 1.2rem;
+            border-radius: 1.5rem;
+            background: rgba(0,0,0,0.3);
+            border-right: 4px solid #0ff;
+            text-align: center;
+        }
+        .options-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+        .option-btn {
+            background: rgba(20, 30, 45, 0.8);
+            border: 1px solid rgba(0, 255, 255, 0.3);
+            border-radius: 1rem;
+            padding: 1rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            transition: 0.2s;
+            color: white;
+        }
+        .option-btn:hover {
+            background: rgba(0, 180, 220, 0.25);
+            transform: translateY(-2px);
+        }
+        .feedback {
+            background: rgba(0,0,0,0.5);
+            border-radius: 1.2rem;
+            padding: 0.8rem;
+            text-align: center;
+            border-right: 3px solid cyan;
+            margin-bottom: 0.5rem;
+        }
+        .explanation-area {
+            background: rgba(0, 50, 70, 0.6);
+            border-radius: 1rem;
+            padding: 0.8rem;
+            margin-top: 0.5rem;
+            border-right: 2px solid #ffaa44;
+            font-size: 0.9rem;
+            display: none;
+        }
+        .explanation-area.show {
+            display: block;
+        }
+        .feedback.correct { background: rgba(0, 255, 100, 0.15); border-right-color: #0f0; }
+        .feedback.wrong { background: rgba(255, 60, 100, 0.2); border-right-color: #ff4d6d; }
+        .section-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border-bottom: 1px dashed cyan;
+            padding-bottom: 0.5rem;
+        }
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.6rem;
+            margin-bottom: 1.2rem;
+        }
+        input, select, textarea {
+            background: rgba(0,0,0,0.6);
+            border: 1px solid #2a4c6e;
+            padding: 0.7rem 1rem;
+            border-radius: 1rem;
+            color: white;
+            font-family: inherit;
+        }
+        textarea {
+            resize: vertical;
+            min-height: 70px;
+        }
+        .options-row {
+            display: flex;
+            gap: 0.8rem;
+            flex-wrap: wrap;
+        }
+        .options-row input { flex: 1; }
+        .btn-icon {
+            background: #0a2a3a;
+            border: none;
+            color: white;
+            padding: 0.6rem 1.2rem;
+            border-radius: 2rem;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        .btn-icon:hover { background: #0e4a60; }
+        .file-actions {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            margin-bottom: 1.5rem;
+        }
+        .file-label, .share-link-btn {
+            background: #1f3e4a;
+            padding: 0.5rem 1rem;
+            border-radius: 2rem;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: white !important;
+            border: none;
+            font-family: inherit;
+            font-size: 0.9rem;
+        }
+        #exportBtn, #shareLinkBtn {
+            color: white !important;
+        }
+        .question-list {
+            max-height: 280px;
+            overflow-y: auto;
+            margin-top: 1rem;
+        }
+        .question-item {
+            background: rgba(0, 20, 30, 0.6);
+            margin: 0.5rem 0;
+            padding: 0.7rem;
+            border-radius: 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .delete-btn {
+            background: none;
+            border: none;
+            color: #ff7780;
+            font-size: 1.2rem;
+            cursor: pointer;
+        }
+        .empty-msg { text-align: center; opacity: 0.7; padding: 1rem; }
+        footer { text-align: center; font-size: 0.7rem; margin-top: 1rem; opacity: 0.6; }
+        
+        /* إحصائيات */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+        .stat-card {
+            background: rgba(0,0,0,0.5);
+            border-radius: 1rem;
+            padding: 1rem;
+            text-align: center;
+            border: 1px solid rgba(0,255,255,0.3);
+        }
+        .stat-number {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #0ff;
+        }
+        .difficult-questions {
+            margin-top: 1rem;
+        }
+        .difficult-item {
+            background: rgba(0,0,0,0.4);
+            margin: 0.5rem 0;
+            padding: 0.6rem;
+            border-radius: 0.8rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .focus-btn {
+            background: #ff884d;
+            border: none;
+            color: white;
+            padding: 0.2rem 0.8rem;
+            border-radius: 1rem;
+            cursor: pointer;
+            font-size: 0.7rem;
+        }
+        /* نافذة الاختبار */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            backdrop-filter: blur(8px);
+            z-index: 1000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            visibility: hidden;
+            opacity: 0;
+            transition: 0.2s;
+        }
+        .modal-overlay.active {
+            visibility: visible;
+            opacity: 1;
+        }
+        .modal-content {
+            background: #0a1620;
+            border-radius: 2rem;
+            padding: 1.5rem;
+            max-width: 90%;
+            width: 550px;
+            border: 1px solid cyan;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        .question-check-list {
+            margin: 1rem 0;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .check-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin: 0.3rem 0;
+            padding: 0.3rem;
+        }
+        .modal-buttons {
+            display: flex;
+            gap: 1rem;
+            justify-content: flex-end;
+            margin-top: 1rem;
+        }
+        /* الأزرار الجديدة في الأسفل */
+        .bottom-links {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            margin-top: 1.5rem;
+            flex-wrap: wrap;
+        }
+        .bottom-btn {
+            background: #1f3e4a;
+            color: white;
+            padding: 0.5rem 1.2rem;
+            border-radius: 2rem;
+            text-decoration: none;
+            font-size: 0.9rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: 0.2s;
+            border: none;
+            cursor: pointer;
+        }
+        .bottom-btn:hover {
+            background: #0e4a60;
+            transform: translateY(-2px);
+        }
+        @media (max-width: 700px) {
+            .quiz-card, .manage-section, .stats-section { padding: 1.2rem; }
+            .question-text { font-size: 1.3rem; }
+            .title { margin-bottom: 0.5rem; }
+            .header-actions { margin-top: 0.25rem; }
+        }
+    </style>
+</head>
+<body>
+<div id="canvas-container"></div>
+<div class="app-container">
+    <div class="quiz-card">
+        <div class="quiz-header">
+            <div class="title">
+                <h1><i class="fas fa-atom"></i> فلاش كاردز ذكية</h1>
+                <p>صحيحة ← تلقائي للسؤال التالي | خاطئة ← يعاد السؤال</p>
+            </div>
+            <div class="header-actions">
+                <button id="soundToggleBtn" class="sound-toggle" title="كتم / تشغيل الصوت"><i class="fas fa-volume-up"></i></button>
+                <button id="mistakesOnlyBtn" class="mistakes-toggle" title="راجع أسئلتي الخاطئة فقط"><i class="fas fa-bug"></i> أخطائي فقط</button>
+                <button id="quizModeBtn" class="quiz-mode-btn" title="اختبار مخصص"><i class="fas fa-vial"></i> اختبار مخصص</button>
+                <div class="stats"><i class="fas fa-chalkboard-user"></i> السؤال <span id="current-q-num">1</span> / <span id="total-q-count">0</span></div>
+            </div>
+        </div>
+        <div class="decks-area">
+            <i class="fas fa-layer-group"></i>
+            <select id="deckSelector" class="deck-select"></select>
+            <button id="newDeckBtn" class="deck-btn"><i class="fas fa-plus"></i> جديد</button>
+            <button id="deleteDeckBtn" class="deck-btn"><i class="fas fa-trash"></i> حذف المجموعة</button>
+        </div>
+        <div class="progress-area">
+            <div class="progress-text"><span><i class="fas fa-sync-alt"></i> التكرار حتى الإتقان</span><span id="progress-label"></span></div>
+            <div class="progress-bar-bg"><div class="progress-fill" id="progress-fill"></div></div>
+        </div>
+        <div class="question-container">
+            <div class="question-text" id="question-text">📭 أضف أسئلتك من الأسفل أو استورد ملف JSON</div>
+        </div>
+        <div class="options-grid" id="options-container"></div>
+        <div class="feedback" id="feedback-area">✨ استخدم الأزرار أدناه لإدارة الأسئلة</div>
+        <div class="explanation-area" id="explanationArea"></div>
+        <div class="action-buttons" style="display: flex; gap: 1rem; justify-content: center; margin-top: 1rem;">
+            <button class="btn-icon" id="resetProgressBtn"><i class="fas fa-undo-alt"></i> إعادة الدورة</button>
+            <button class="btn-icon" id="resetStatsBtn"><i class="fas fa-chart-simple"></i> إعادة ضبط الإحصائيات</button>
+        </div>
+    </div>
+
+    <div class="stats-section">
+        <div class="section-title"><i class="fas fa-chart-line"></i> الإحصائيات والتحليلات</div>
+        <div class="stats-grid" id="statsGrid">
+            <div class="stat-card"><div>✅ الإجابات الصحيحة</div><div class="stat-number" id="totalCorrectStat">0</div></div>
+            <div class="stat-card"><div>❌ الإجابات الخاطئة</div><div class="stat-number" id="totalWrongStat">0</div></div>
+            <div class="stat-card"><div>📊 نسبة النجاح</div><div class="stat-number" id="successRateStat">0%</div></div>
+        </div>
+        <div class="difficult-questions"><div><i class="fas fa-exclamation-triangle"></i> أكثر 3 أسئلة صعوبة (الأكثر أخطاء)</div><div id="difficultList"></div></div>
+        <footer>📊 الإحصائيات تحفظ تلقائياً لكل مجموعة. زر "أخطائي فقط" يعرض الأسئلة الخاطئة في المجموعة الحالية.</footer>
+    </div>
+
+    <div class="manage-section">
+        <div class="section-title"><i class="fas fa-database"></i> إدارة الأسئلة (للمجموعة الحالية)</div>
+        <div class="file-actions">
+            <button id="exportBtn" class="file-label"><i class="fas fa-download"></i> تصدير الأسئلة الحالية (JSON)</button>
+            <label for="uploadJsonInput" class="file-label"><i class="fas fa-upload"></i> استيراد ملف JSON (استبدال)</label>
+            <input type="file" id="uploadJsonInput" accept=".json" style="display: none;">
+            <button id="shareLinkBtn" class="file-label"><i class="fas fa-share-alt"></i> نسخ الرابط</button>
+        </div>
+        <div class="form-group">
+            <input type="text" id="questionInput" placeholder="السؤال الجديد">
+            <div id="optionsInputs">
+                <div class="options-row"><input type="text" placeholder="الاختيار 1" class="opt-input"></div>
+                <div class="options-row"><input type="text" placeholder="الاختيار 2" class="opt-input"></div>
+                <div class="options-row"><input type="text" placeholder="الاختيار 3" class="opt-input"></div>
+                <div class="options-row"><input type="text" placeholder="الاختيار 4" class="opt-input"></div>
+            </div>
+            <div class="options-row">
+                <label>الإجابة الصحيحة رقم : </label>
+                <select id="correctSelect">
+                    <option value="0">الاختيار 1</option><option value="1">الاختيار 2</option>
+                    <option value="2">الاختيار 3</option><option value="3">الاختيار 4</option>
+                </select>
+                <button id="addQuestionBtn" class="btn-icon"><i class="fas fa-plus"></i> أضف سؤالاً</button>
+            </div>
+            <textarea id="explanationInput" rows="2" placeholder="شرح إضافي (اختياري) - يظهر بعد الإجابة لتعزيز الفهم"></textarea>
+        </div>
+        <div class="section-title"><i class="fas fa-list"></i> قائمة أسئلتك</div>
+        <div id="questionsList" class="question-list"><div class="empty-msg">لا توجد أسئلة بعد</div></div>
+        
+        <!-- الأزرار الجديدة في الأسفل -->
+        <div class="bottom-links">
+            <a href="https://ibrahimmustafacv.github.io/" target="_blank" class="bottom-btn"><i class="fas fa-project-diagram"></i> للمزيد من المشاريع</a>
+            <a href="https://ibrahimmustafacv.github.io/my-social-media-page/" target="_blank" class="bottom-btn"><i class="fas fa-users"></i> تابعنا هنا</a>
+        </div>
+    </div>
+</div>
+
+<!-- نافذة اختيار أسئلة الاختبار -->
+<div id="quizModal" class="modal-overlay">
+    <div class="modal-content">
+        <h3><i class="fas fa-vial"></i> اختر أسئلة الاختبار</h3>
+        <div class="question-check-list" id="quizQuestionChecklist"></div>
+        <div style="display: flex; gap: 0.5rem; margin-bottom: 1rem;">
+            <button id="selectAllBtn" class="deck-btn">تحديد الكل</button>
+            <button id="deselectAllBtn" class="deck-btn">إلغاء الكل</button>
+            <button id="randomSelectBtn" class="deck-btn">اختيار عشوائي (عدد)</button>
+            <input type="number" id="randomCountInput" placeholder="عدد" min="1" style="width: 70px;">
+        </div>
+        <div class="modal-buttons">
+            <button id="startQuizBtn" class="btn-icon">بدء الاختبار</button>
+            <button id="cancelQuizBtn" class="btn-icon">إلغاء</button>
+        </div>
+        <footer>⚠️ سيتم إنشاء نسخة مؤقتة من الأسئلة المحددة، لن تتأثر المجموعة الأصلية.</footer>
+    </div>
+</div>
+
+<script type="module">
+    import * as THREE from 'three';
+    // ----- Three.js background -----
+    const container = document.getElementById('canvas-container');
+    const scene = new THREE.Scene(); scene.background = new THREE.Color(0x050b15);
+    const camera = new THREE.PerspectiveCamera(45, window.innerWidth/window.innerHeight, 0.1, 1000);
+    camera.position.set(0, 1.5, 12);
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    container.appendChild(renderer.domElement);
+    const geom = new THREE.BufferGeometry();
+    const positions = new Float32Array(1500*3);
+    for(let i=0;i<1500;i++){ const r=4+Math.random()*5; const theta=Math.random()*Math.PI*2; const phi=Math.acos(2*Math.random()-1);
+        positions[i*3]=r*Math.sin(phi)*Math.cos(theta); positions[i*3+1]=r*Math.sin(phi)*Math.sin(theta)*0.7; positions[i*3+2]=r*Math.cos(phi); }
+    geom.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    const points = new THREE.Points(geom, new THREE.PointsMaterial({ color: 0x33aaff, size: 0.07, blending: THREE.AdditiveBlending }));
+    scene.add(points);
+    const knot = new THREE.Mesh(new THREE.TorusKnotGeometry(1.1,0.18,200,32,3,4), new THREE.MeshStandardMaterial({ color: 0x33aaff, emissive: 0x115588 }));
+    scene.add(knot);
+    scene.add(new THREE.AmbientLight(0x111122));
+    const light = new THREE.PointLight(0x88aaff,1); light.position.set(2,3,4); scene.add(light);
+    let t=0; function animate(){ requestAnimationFrame(animate); t+=0.006; points.rotation.y=t*0.1; knot.rotation.x=t*0.3; knot.rotation.y=t*0.5; renderer.render(scene,camera); } animate();
+    window.addEventListener('resize',()=>{ camera.aspect=window.innerWidth/window.innerHeight; camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth,window.innerHeight); });
+    
+    // ---------- مؤثرات صوتية ----------
+    let audioCtx = null;
+    let soundEnabled = true;
+    const soundToggleBtn = document.getElementById('soundToggleBtn');
+    function initAudio() { if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)(); }
+    function playCorrectSound() { if (!soundEnabled) return; try { initAudio(); const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain(); osc.connect(gain); gain.connect(audioCtx.destination); osc.type = 'sine'; osc.frequency.value = 880; gain.gain.value = 0.3; osc.start(); gain.gain.exponentialRampToValueAtTime(0.00001, audioCtx.currentTime + 0.8); osc.stop(audioCtx.currentTime + 0.8); } catch(e) {} }
+    function playWrongSound() { if (!soundEnabled) return; try { initAudio(); const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain(); osc.connect(gain); gain.connect(audioCtx.destination); osc.type = 'sawtooth'; osc.frequency.value = 220; gain.gain.value = 0.25; osc.start(); gain.gain.exponentialRampToValueAtTime(0.00001, audioCtx.currentTime + 0.6); osc.stop(audioCtx.currentTime + 0.6); } catch(e) {} }
+    soundToggleBtn.addEventListener('click', () => {
+        soundEnabled = !soundEnabled;
+        const icon = soundToggleBtn.querySelector('i');
+        if (soundEnabled) { icon.classList.remove('fa-volume-mute'); icon.classList.add('fa-volume-up'); playCorrectSound(); }
+        else { icon.classList.remove('fa-volume-up'); icon.classList.add('fa-volume-mute'); }
+    });
+    document.body.addEventListener('click', () => { if(audioCtx && audioCtx.state === 'suspended') audioCtx.resume(); }, { once: true });
+    
+    // =================== إدارة المجموعات (Decks) ===================
+    const DECKS_STORAGE_KEY = 'flashcards_decks';
+    let decks = {};
+    let currentDeckId = null;
+    
+    function loadDecks() {
+        const stored = localStorage.getItem(DECKS_STORAGE_KEY);
+        if (stored) { try { decks = JSON.parse(stored); } catch(e) { decks = {}; } }
+        if (Object.keys(decks).length === 0) {
+            const defaultId = 'deck_' + Date.now();
+            decks[defaultId] = { name: 'الافتراضية', questions: [], performanceData: {}, currentIndex: 0 };
+            saveDecks();
+        }
+        let lastDeck = localStorage.getItem('last_deck_id');
+        if (lastDeck && decks[lastDeck]) currentDeckId = lastDeck;
+        else currentDeckId = Object.keys(decks)[0];
+        saveLastDeck();
+    }
+    function saveDecks() { localStorage.setItem(DECKS_STORAGE_KEY, JSON.stringify(decks)); }
+    function saveLastDeck() { if (currentDeckId) localStorage.setItem('last_deck_id', currentDeckId); }
+    function getCurrentDeck() { return decks[currentDeckId]; }
+    function setCurrentDeckData(questions, performanceData, currentIndex) {
+        decks[currentDeckId].questions = questions;
+        decks[currentDeckId].performanceData = performanceData;
+        decks[currentDeckId].currentIndex = currentIndex;
+        saveDecks();
+    }
+    function refreshDeckSelector() {
+        const selector = document.getElementById('deckSelector');
+        selector.innerHTML = '';
+        for (let id in decks) {
+            const option = document.createElement('option');
+            option.value = id;
+            option.textContent = decks[id].name;
+            if (id === currentDeckId) option.selected = true;
+            selector.appendChild(option);
+        }
+    }
+    function switchToDeck(deckId) {
+        if (!decks[deckId]) return;
+        setCurrentDeckData(questions, performanceData, currentIndex);
+        currentDeckId = deckId;
+        saveLastDeck();
+        const deck = decks[currentDeckId];
+        questions = deck.questions || [];
+        performanceData = deck.performanceData || {};
+        currentIndex = deck.currentIndex || 0;
+        if (mistakesFilterActive) setMistakesFilter(false);
+        if (quizActive) exitQuizMode();
+        renderQuestionsList();
+        renderCurrentQuestion();
+        updateStatsUI();
+        refreshDeckSelector();
+        feedbackArea.innerHTML = `🔄 تم التبديل إلى مجموعة "${deck.name}".`;
+        feedbackArea.className = "feedback";
+        setTimeout(()=>{ if(feedbackArea.innerHTML.includes("التبديل")) feedbackArea.className = "feedback"; }, 2000);
+    }
+    function createNewDeck() {
+        let name = prompt("أدخل اسم المجموعة الجديدة:", "مجموعة جديدة");
+        if (!name) return;
+        const newId = 'deck_' + Date.now();
+        decks[newId] = { name: name, questions: [], performanceData: {}, currentIndex: 0 };
+        saveDecks();
+        switchToDeck(newId);
+    }
+    function deleteCurrentDeck() {
+        if (Object.keys(decks).length === 1) { alert("لا يمكن حذف المجموعة الوحيدة."); return; }
+        if (confirm(`حذف مجموعة "${decks[currentDeckId].name}"؟`)) {
+            delete decks[currentDeckId];
+            saveDecks();
+            switchToDeck(Object.keys(decks)[0]);
+        }
+    }
+    document.getElementById('deckSelector').addEventListener('change', (e) => switchToDeck(e.target.value));
+    document.getElementById('newDeckBtn').addEventListener('click', createNewDeck);
+    document.getElementById('deleteDeckBtn').addEventListener('click', deleteCurrentDeck);
+    
+    // ---------- إحصائيات الأداء ----------
+    function initStatsForQuestion(idx) { if (!performanceData[idx]) performanceData[idx] = { correct: 0, wrong: 0 }; }
+    function updateStatsAfterAnswer(questionIdx, wasCorrect) {
+        if (!performanceData[questionIdx]) performanceData[questionIdx] = { correct: 0, wrong: 0 };
+        if (wasCorrect) performanceData[questionIdx].correct++;
+        else performanceData[questionIdx].wrong++;
+        saveCurrentDeckData();
+        updateStatsUI();
+    }
+    function resetAllStats() {
+        if (confirm("إعادة ضبط الإحصائيات للمجموعة الحالية؟")) {
+            performanceData = {};
+            for (let i=0; i<questions.length; i++) performanceData[i] = { correct:0, wrong:0 };
+            saveCurrentDeckData();
+            updateStatsUI();
+            feedbackArea.innerHTML = "📊 تم إعادة ضبط الإحصائيات.";
+            feedbackArea.className = "feedback correct";
+            setTimeout(()=>{ if(feedbackArea.innerHTML.includes("ضبط")) feedbackArea.className = "feedback"; }, 2000);
+        }
+    }
+    function saveCurrentDeckData() { setCurrentDeckData(questions, performanceData, currentIndex); }
+    function updateStatsUI() {
+        let totalCorrect=0, totalWrong=0;
+        for (let i=0; i<questions.length; i++) {
+            const p = performanceData[i];
+            if (p) { totalCorrect += p.correct; totalWrong += p.wrong; }
+        }
+        document.getElementById('totalCorrectStat').innerText = totalCorrect;
+        document.getElementById('totalWrongStat').innerText = totalWrong;
+        const total = totalCorrect+totalWrong;
+        const rate = total===0?0:Math.round((totalCorrect/total)*100);
+        document.getElementById('successRateStat').innerText = `${rate}%`;
+        const difficult = [];
+        for (let i=0; i<questions.length; i++) {
+            const p = performanceData[i];
+            if (p && p.wrong > 0) difficult.push({ index:i, wrong:p.wrong, text:questions[i].text });
+        }
+        difficult.sort((a,b)=>b.wrong-a.wrong);
+        const top3 = difficult.slice(0,3);
+        const container = document.getElementById('difficultList');
+        if (top3.length===0) container.innerHTML='<div class="empty-msg">✨ لا توجد أسئلة صعبة بعد.</div>';
+        else {
+            let html='';
+            top3.forEach((item,idx)=>{
+                const shortText = item.text.length>40? item.text.slice(0,37)+'...': item.text;
+                html += `<div class="difficult-item"><span>${idx+1}. ${escapeHtml(shortText)} (${item.wrong} خطأ)</span><button class="focus-btn" data-idx="${item.index}"><i class="fas fa-crosshairs"></i> ركز</button></div>`;
+            });
+            container.innerHTML = html;
+            document.querySelectorAll('.focus-btn').forEach(btn=>{
+                btn.addEventListener('click',(e)=>{
+                    const idx = parseInt(btn.dataset.idx);
+                    if (!isNaN(idx) && questions[idx]) {
+                        if (mistakesFilterActive) setMistakesFilter(false);
+                        if (quizActive) exitQuizMode();
+                        currentIndex = idx;
+                        renderCurrentQuestion();
+                        feedbackArea.innerHTML = `🎯 تم التوجه إلى السؤال: "${escapeHtml(questions[idx].text)}"`;
+                        feedbackArea.className = "feedback";
+                        setTimeout(()=>{ if(feedbackArea.innerHTML.includes("التوجه")) feedbackArea.className = "feedback"; }, 2000);
+                    }
+                });
+            });
+        }
+    }
+    
+    // ---------- وضع مراجعة الأخطاء ----------
+    let mistakesFilterActive = false;
+    let filteredMistakesIndices = [];
+    let originalQuestionsList = [];
+    let originalCurrentIndex = 0;
+    const mistakesBtn = document.getElementById('mistakesOnlyBtn');
+    function setMistakesFilter(active) {
+        if (active) {
+            if (quizActive) exitQuizMode();
+            const mistakeIndices = [];
+            for (let i=0; i<originalQuestionsList.length; i++) {
+                const p = performanceData[i];
+                if (p && p.wrong > 0) mistakeIndices.push(i);
+            }
+            if (mistakeIndices.length===0) {
+                feedbackArea.innerHTML = "⚠️ لا توجد أسئلة خاطئة في هذه المجموعة.";
+                feedbackArea.className = "feedback wrong";
+                setTimeout(()=>{ if(feedbackArea.innerHTML.includes("خاطئة")) feedbackArea.className = "feedback"; }, 2000);
+                return;
+            }
+            originalQuestionsList = [...questions];
+            originalCurrentIndex = currentIndex;
+            const newQuestions = [];
+            filteredMistakesIndices = mistakeIndices;
+            for (let idx of mistakeIndices) newQuestions.push({ ...questions[idx] });
+            questions = newQuestions;
+            currentIndex = 0;
+            mistakesFilterActive = true;
+            mistakesBtn.classList.add('active');
+            renderCurrentQuestion();
+            renderQuestionsList();
+            feedbackArea.innerHTML = `🔍 وضع مراجعة الأخطاء: ${questions.length} سؤالاً خاطئاً.`;
+            feedbackArea.className = "feedback correct";
+        } else {
+            if (originalQuestionsList.length) {
+                questions = originalQuestionsList;
+                originalQuestionsList = [];
+                currentIndex = originalCurrentIndex;
+                if (currentIndex>=questions.length) currentIndex=0;
+                mistakesFilterActive = false;
+                mistakesBtn.classList.remove('active');
+                renderCurrentQuestion();
+                renderQuestionsList();
+                feedbackArea.innerHTML = "🌐 العودة إلى جميع الأسئلة.";
+                feedbackArea.className = "feedback";
+            }
+        }
+        updateStatsUI();
+    }
+    mistakesBtn.addEventListener('click', () => {
+        if (mistakesFilterActive) setMistakesFilter(false);
+        else setMistakesFilter(true);
+    });
+    
+    // ---------- وضع الاختبارات المحاكاة (Quiz Mode) ----------
+    let quizActive = false;
+    let quizQuestions = [];
+    let quizCurrentIndex = 0;
+    let quizOriginalDeckId = null;
+    const quizBtn = document.getElementById('quizModeBtn');
+    const modal = document.getElementById('quizModal');
+    const checklistDiv = document.getElementById('quizQuestionChecklist');
+    let selectedIndices = [];
+    
+    function openQuizModal() {
+        if (mistakesFilterActive) setMistakesFilter(false);
+        if (quizActive) exitQuizMode();
+        checklistDiv.innerHTML = '';
+        selectedIndices = [];
+        questions.forEach((q, idx) => {
+            const div = document.createElement('div');
+            div.className = 'check-item';
+            const cb = document.createElement('input');
+            cb.type = 'checkbox';
+            cb.value = idx;
+            cb.id = `qcb_${idx}`;
+            const label = document.createElement('label');
+            label.htmlFor = `qcb_${idx}`;
+            label.textContent = `${idx+1}. ${q.text.length>60? q.text.slice(0,57)+'...' : q.text}`;
+            div.appendChild(cb);
+            div.appendChild(label);
+            checklistDiv.appendChild(div);
+        });
+        if (questions.length === 0) {
+            checklistDiv.innerHTML = '<div class="empty-msg">لا توجد أسئلة لاختيارها</div>';
+        }
+        modal.classList.add('active');
+    }
+    function closeModal() { modal.classList.remove('active'); }
+    function startQuiz() {
+        const checkboxes = document.querySelectorAll('#quizQuestionChecklist input[type="checkbox"]');
+        selectedIndices = [];
+        checkboxes.forEach(cb => { if (cb.checked) selectedIndices.push(parseInt(cb.value)); });
+        if (selectedIndices.length === 0) {
+            feedbackArea.innerHTML = "⚠️ لم تختر أي سؤال.";
+            return;
+        }
+        closeModal();
+        quizOriginalDeckId = currentDeckId;
+        quizQuestions = [];
+        for (let idx of selectedIndices) {
+            quizQuestions.push({ ...questions[idx] });
+        }
+        quizCurrentIndex = 0;
+        quizActive = true;
+        quizBtn.classList.add('quiz-active');
+        originalQuestionsList = [...questions];
+        originalCurrentIndex = currentIndex;
+        questions = quizQuestions;
+        currentIndex = 0;
+        mistakesFilterActive = false;
+        mistakesBtn.classList.remove('active');
+        renderCurrentQuestion();
+        renderQuestionsList();
+        feedbackArea.innerHTML = `🧪 وضع الاختبار: ${questions.length} سؤالاً. أجب بشكل صحيح لتنتقل، بعد الانتهاء ستظهر النتيجة.`;
+    }
+    function exitQuizMode() {
+        if (!quizActive) return;
+        if (originalQuestionsList.length) {
+            questions = originalQuestionsList;
+            originalQuestionsList = [];
+            currentIndex = originalCurrentIndex;
+        }
+        quizActive = false;
+        quizBtn.classList.remove('quiz-active');
+        renderCurrentQuestion();
+        renderQuestionsList();
+        feedbackArea.innerHTML = "🌐 تم الخروج من وضع الاختبار.";
+    }
+    function finishQuiz() {
+        let total = quizQuestions.length;
+        alert(`✨ انتهى الاختبار! لقد أتممت ${total} سؤالاً.`);
+        if (confirm("هل تريد حفظ هذه الأسئلة المختارة في مجموعة جديدة؟")) {
+            const newDeckName = prompt("أدخل اسم المجموعة الجديدة:", `اختبار من ${decks[currentDeckId].name}`);
+            if (newDeckName) {
+                const newId = 'deck_' + Date.now();
+                decks[newId] = {
+                    name: newDeckName,
+                    questions: quizQuestions.map(q => ({ ...q })),
+                    performanceData: {},
+                    currentIndex: 0
+                };
+                saveDecks();
+                alert(`تم إنشاء مجموعة جديدة "${newDeckName}" تحتوي على ${quizQuestions.length} سؤالاً.`);
+            }
+        }
+        exitQuizMode();
+    }
+    document.getElementById('quizModeBtn').addEventListener('click', openQuizModal);
+    document.getElementById('cancelQuizBtn').addEventListener('click', closeModal);
+    document.getElementById('startQuizBtn').addEventListener('click', startQuiz);
+    document.getElementById('selectAllBtn').addEventListener('click', () => {
+        document.querySelectorAll('#quizQuestionChecklist input[type="checkbox"]').forEach(cb => cb.checked = true);
+    });
+    document.getElementById('deselectAllBtn').addEventListener('click', () => {
+        document.querySelectorAll('#quizQuestionChecklist input[type="checkbox"]').forEach(cb => cb.checked = false);
+    });
+    document.getElementById('randomSelectBtn').addEventListener('click', () => {
+        const count = parseInt(document.getElementById('randomCountInput').value);
+        if (isNaN(count) || count < 1) { alert("أدخل عدداً صحيحاً"); return; }
+        const total = questions.length;
+        if (count > total) { alert(`العدد أكبر من إجمالي الأسئلة (${total})`); return; }
+        const checkboxes = document.querySelectorAll('#quizQuestionChecklist input[type="checkbox"]');
+        checkboxes.forEach(cb => cb.checked = false);
+        const indices = Array.from({length: total}, (_,i) => i);
+        for (let i = indices.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [indices[i], indices[j]] = [indices[j], indices[i]];
+        }
+        for (let i=0; i<count; i++) {
+            checkboxes[indices[i]].checked = true;
+        }
+    });
+    
+    // ---------- مشاركة ومزامنة الأسئلة ----------
+    const shareLinkBtn = document.getElementById('shareLinkBtn');
+    shareLinkBtn.addEventListener('click', () => {
+        const currentQuestions = questions;
+        if (currentQuestions.length === 0) {
+            feedbackArea.innerHTML = "⚠️ لا توجد أسئلة لمشاركتها.";
+            return;
+        }
+        const jsonStr = JSON.stringify(currentQuestions);
+        const encoded = btoa(unescape(encodeURIComponent(jsonStr)));
+        const url = new URL(window.location.href);
+        url.searchParams.set('shared', encoded);
+        navigator.clipboard.writeText(url.toString());
+        feedbackArea.innerHTML = "✅ تم نسخ الرابط بنجاح! يمكنك مشاركته مع أصدقائك.";
+        feedbackArea.className = "feedback correct";
+        setTimeout(()=>{ if(feedbackArea.innerHTML.includes("تم نسخ")) feedbackArea.className = "feedback"; }, 3000);
+    });
+    function loadSharedQuestions() {
+        const params = new URLSearchParams(window.location.search);
+        const shared = params.get('shared');
+        if (shared) {
+            try {
+                const jsonStr = decodeURIComponent(escape(atob(shared)));
+                const importedQuestions = JSON.parse(jsonStr);
+                if (Array.isArray(importedQuestions) && importedQuestions.length > 0) {
+                    if (confirm(`تم العثور على أسئلة مشتركة (${importedQuestions.length} سؤال). هل تريد استبدال أسئلة المجموعة الحالية بها؟`)) {
+                        questions = importedQuestions;
+                        performanceData = {};
+                        for (let i=0; i<questions.length; i++) performanceData[i] = { correct:0, wrong:0 };
+                        currentIndex = 0;
+                        if (mistakesFilterActive) setMistakesFilter(false);
+                        if (quizActive) exitQuizMode();
+                        saveCurrentDeckData();
+                        renderCurrentQuestion();
+                        renderQuestionsList();
+                        feedbackArea.innerHTML = `✅ تم استيراد ${questions.length} سؤال من الرابط.`;
+                        feedbackArea.className = "feedback correct";
+                        window.history.replaceState({}, document.title, window.location.pathname);
+                    }
+                }
+            } catch(e) { console.warn("فشل فك التشفير", e); }
+        }
+    }
+    
+    // ---------- منطق التطبيق الأساسي مع الشرح و دعم الاختبار ----------
+    let questions = [];
+    let performanceData = {};
+    let currentIndex = 0;
+    let isLocked = false;
+    
+    const questionTextEl = document.getElementById('question-text');
+    const optionsContainer = document.getElementById('options-container');
+    const feedbackArea = document.getElementById('feedback-area');
+    const explanationArea = document.getElementById('explanationArea');
+    const currentQNumSpan = document.getElementById('current-q-num');
+    const totalQCountSpan = document.getElementById('total-q-count');
+    const progressFill = document.getElementById('progress-fill');
+    const progressLabel = document.getElementById('progress-label');
+    const resetProgressBtn = document.getElementById('resetProgressBtn');
+    const resetStatsBtn = document.getElementById('resetStatsBtn');
+    const addQuestionBtn = document.getElementById('addQuestionBtn');
+    const questionsListDiv = document.getElementById('questionsList');
+    const questionInput = document.getElementById('questionInput');
+    const optInputs = document.querySelectorAll('.opt-input');
+    const correctSelect = document.getElementById('correctSelect');
+    const explanationInput = document.getElementById('explanationInput');
+    const exportBtn = document.getElementById('exportBtn');
+    const uploadJsonInput = document.getElementById('uploadJsonInput');
+    
+    function renderCurrentQuestion() {
+        explanationArea.classList.remove('show');
+        explanationArea.innerHTML = '';
+        if(!questions.length){
+            questionTextEl.innerText = "📭 لا توجد أسئلة في هذه المجموعة.";
+            optionsContainer.innerHTML = '';
+            updateStatsUI(); return;
+        }
+        if(currentIndex>=questions.length) {
+            if (quizActive) {
+                finishQuiz();
+                return;
+            }
+            currentIndex=0;
+        }
+        const q = questions[currentIndex];
+        questionTextEl.innerText = q.text;
+        optionsContainer.innerHTML = '';
+        q.options.forEach((opt, idx)=>{
+            const btn = document.createElement('div');
+            btn.className = 'option-btn';
+            btn.innerHTML = `<i class="fas fa-circle-notch"></i><span>${escapeHtml(opt)}</span>`;
+            btn.addEventListener('click',()=>{ if(!isLocked) handleAnswer(idx); });
+            optionsContainer.appendChild(btn);
+        });
+        updateStatsUI();
+        feedbackArea.innerHTML = quizActive ? "🧪 وضع الاختبار: أجب بشكل صحيح لتنتقل للسؤال التالي." : "🔍 اختر إجابة. صحيحة → ينتقل تلقائياً، خاطئة → يعاد السؤال.";
+        feedbackArea.className = "feedback";
+        isLocked = false;
+        const percent = questions.length===0?0:((currentIndex+1)/questions.length)*100;
+        progressFill.style.width = `${percent}%`;
+        currentQNumSpan.innerText = questions.length===0?0:currentIndex+1;
+        totalQCountSpan.innerText = questions.length;
+        progressLabel.innerText = `السؤال ${questions.length===0?0:currentIndex+1} من ${questions.length}`;
+    }
+    
+    function showExplanation(explanationText) {
+        if (explanationText && explanationText.trim() !== "") {
+            explanationArea.innerHTML = `<i class="fas fa-lightbulb"></i> ${escapeHtml(explanationText)}`;
+            explanationArea.classList.add('show');
+        } else {
+            explanationArea.classList.remove('show');
+        }
+    }
+    
+    function handleAnswer(selected){
+        if(!questions.length || isLocked) return;
+        const q = questions[currentIndex];
+        const correct = (selected === q.correct);
+        let realIndex = currentIndex;
+        if (mistakesFilterActive && filteredMistakesIndices.length) realIndex = filteredMistakesIndices[currentIndex];
+        else realIndex = currentIndex;
+        
+        if (correct){
+            playCorrectSound();
+            if (!quizActive) updateStatsAfterAnswer(realIndex, true);
+            feedbackArea.innerHTML = `✅ صحيح! "${escapeHtml(q.options[selected])}" ✔️ → السؤال التالي.`;
+            feedbackArea.className = "feedback correct";
+            showExplanation(q.explanation);
+            isLocked = true;
+            currentIndex = (currentIndex+1) % questions.length;
+            setTimeout(()=>{ renderCurrentQuestion(); isLocked=false; }, 500);
+        } else {
+            playWrongSound();
+            if (!quizActive) updateStatsAfterAnswer(realIndex, false);
+            feedbackArea.innerHTML = `❌ خطأ! الإجابة الصحيحة: "${escapeHtml(q.options[q.correct])}". حاول مرة أخرى.`;
+            feedbackArea.className = "feedback wrong";
+            showExplanation(q.explanation);
+            const btns = document.querySelectorAll('.option-btn');
+            btns.forEach((btn,idx)=>{
+                if(idx===q.correct) btn.style.border = '2px solid #0f0';
+                if(idx===selected) btn.style.background = 'rgba(255,70,100,0.3)';
+            });
+            setTimeout(()=>{ btns.forEach(btn=>{ btn.style.border=''; btn.style.background=''; }); }, 1200);
+        }
+    }
+    
+    function resetCycle(){
+        if(questions.length){
+            if (mistakesFilterActive) setMistakesFilter(false);
+            if (quizActive) exitQuizMode();
+            currentIndex=0;
+            renderCurrentQuestion();
+            feedbackArea.innerHTML="🔄 تم إعادة الدورة.";
+            feedbackArea.className="feedback";
+        }
+    }
+    
+    function addNewQuestion(){
+        if (quizActive) exitQuizMode();
+        const text = questionInput.value.trim();
+        if(!text){ feedback("⚠️ أدخل نص السؤال", true); return; }
+        const opts = Array.from(optInputs).map(inp=>inp.value.trim());
+        if(opts.some(o=>!o)){ feedback("⚠️ جميع الخيارات مطلوبة", true); return; }
+        const correct = parseInt(correctSelect.value);
+        const explanation = explanationInput.value.trim();
+        const newIdx = questions.length;
+        questions.push({ text, options: opts, correct, explanation });
+        initStatsForQuestion(newIdx);
+        clearAddForm();
+        renderQuestionsList();
+        renderCurrentQuestion();
+        saveCurrentDeckData();
+        feedback("✅ تم إضافة السؤال مع الشرح (إن وجد)", false);
+    }
+    
+    function deleteQuestion(idx){
+        if (quizActive) exitQuizMode();
+        if(idx>=0 && idx<questions.length){
+            questions.splice(idx,1);
+            const newPerf = {};
+            let newIdx = 0;
+            for (let i=0; i<questions.length+1; i++) {
+                if (i===idx) continue;
+                if (performanceData[i]) newPerf[newIdx] = performanceData[i];
+                newIdx++;
+            }
+            performanceData = newPerf;
+            saveCurrentDeckData();
+            if(questions.length===0){ currentIndex=0; renderCurrentQuestion(); }
+            else { if(currentIndex>=questions.length) currentIndex=questions.length-1; if(currentIndex<0) currentIndex=0; renderCurrentQuestion(); }
+            renderQuestionsList();
+            updateStatsUI();
+            feedback("🗑️ تم الحذف", false);
+        }
+    }
+    
+    function renderQuestionsList(){
+        if(!questions.length){ questionsListDiv.innerHTML='<div class="empty-msg">📭 لا توجد أسئلة.</div>'; return; }
+        let html='';
+        questions.forEach((q,idx)=>{
+            const short = q.text.length>50? q.text.slice(0,47)+'...': q.text;
+            const hasExp = q.explanation ? ' 📝' : '';
+            html += `<div class="question-item"><div><i class="fas fa-question-circle"></i> ${escapeHtml(short)}${hasExp}</div><button class="delete-btn" data-idx="${idx}"><i class="fas fa-trash-alt"></i></button></div>`;
+        });
+        questionsListDiv.innerHTML = html;
+        document.querySelectorAll('.delete-btn').forEach(btn=>{
+            btn.addEventListener('click',(e)=>{ const i=parseInt(btn.dataset.idx); deleteQuestion(i); });
+        });
+    }
+    
+    function clearAddForm(){ questionInput.value=''; optInputs.forEach(inp=>inp.value=''); correctSelect.value='0'; explanationInput.value=''; }
+    function feedback(msg, isError){ feedbackArea.innerHTML=msg; feedbackArea.className= isError? "feedback wrong":"feedback correct"; setTimeout(()=>{ if(feedbackArea.innerHTML===msg) feedbackArea.className="feedback"; }, 2500); }
+    function escapeHtml(str){ return str.replace(/[&<>]/g, function(m){ if(m==='&') return '&amp;'; if(m==='<') return '&lt;'; if(m==='>') return '&gt;'; return m;}); }
+    
+    function exportQuestions(){
+        if(!questions.length){ feedback("⚠️ لا توجد أسئلة", true); return; }
+        const dataStr = JSON.stringify(questions, null, 2);
+        const blob = new Blob([dataStr], {type:"application/json"});
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a'); a.href = url; a.download = `deck_${decks[currentDeckId].name}_questions.json`;
+        document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+        feedback("📥 تم التصدير", false);
+    }
+    
+    function importJsonFile(file){
+        if (quizActive) exitQuizMode();
+        const reader = new FileReader();
+        reader.onload = function(e){
+            try{
+                const imported = JSON.parse(e.target.result);
+                if(!Array.isArray(imported)) throw new Error("ليس مصفوفة");
+                for(let q of imported){
+                    if(!q.text || !Array.isArray(q.options) || q.options.length!==4 || typeof q.correct!=='number' || q.correct<0 || q.correct>3)
+                        throw new Error("تنسيق غير صحيح");
+                    if (!q.hasOwnProperty('explanation')) q.explanation = "";
+                }
+                questions = imported;
+                performanceData = {};
+                for (let i=0; i<questions.length; i++) performanceData[i] = { correct:0, wrong:0 };
+                currentIndex=0;
+                if (mistakesFilterActive) setMistakesFilter(false);
+                saveCurrentDeckData();
+                renderCurrentQuestion(); renderQuestionsList();
+                feedback(`✅ تم استيراد ${questions.length} سؤال (مع الشرح إن وجد)`, false);
+            } catch(err){ feedback(`❌ خطأ: ${err.message}`, true); }
+        };
+        reader.readAsText(file);
+    }
+    
+    addQuestionBtn.addEventListener('click', addNewQuestion);
+    resetProgressBtn.addEventListener('click', resetCycle);
+    resetStatsBtn.addEventListener('click', resetAllStats);
+    exportBtn.addEventListener('click', exportQuestions);
+    uploadJsonInput.addEventListener('change', (e)=>{ if(e.target.files.length) importJsonFile(e.target.files[0]); uploadJsonInput.value=''; });
+    
+    // التهيئة
+    loadDecks();
+    const deck = getCurrentDeck();
+    questions = deck.questions || [];
+    performanceData = deck.performanceData || {};
+    currentIndex = deck.currentIndex || 0;
+    for (let i=0; i<questions.length; i++) initStatsForQuestion(i);
+    originalQuestionsList = [...questions];
+    refreshDeckSelector();
+    renderQuestionsList();
+    renderCurrentQuestion();
+    loadSharedQuestions();
+</script>
+</body>
+</html>
