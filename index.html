@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>فلاش كاردز - نسخة PC متجاوبة مع الجوال</title>
+    <title>فلاش كاردز - نسخة PC متجاوبة مع الجوال + استماع للسؤال</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <script type="importmap">
@@ -158,6 +158,7 @@
             padding: 0.2rem;
             margin: 1rem 0 1.5rem;
             border: 1px solid rgba(0, 255, 255, 0.2);
+            position: relative;
         }
         .question-text {
             font-size: 1.7rem;
@@ -168,6 +169,30 @@
             background: rgba(0,0,0,0.3);
             border-right: 4px solid #0ff;
             text-align: center;
+            padding-right: 3rem;
+        }
+        .speak-btn {
+            position: absolute;
+            left: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(0, 255, 255, 0.2);
+            border: 1px solid #0ff;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: 0.2s;
+            color: #0ff;
+            font-size: 1.2rem;
+        }
+        .speak-btn:hover {
+            background: #0ff;
+            color: #050b15;
+            transform: translateY(-50%) scale(1.05);
         }
         .options-grid {
             display: grid;
@@ -429,6 +454,13 @@
             .question-text {
                 font-size: 1.4rem;
                 padding: 1rem;
+                padding-right: 2.5rem;
+            }
+            .speak-btn {
+                width: 32px;
+                height: 32px;
+                font-size: 1rem;
+                left: 10px;
             }
             .options-grid {
                 grid-template-columns: 1fr;
@@ -485,6 +517,13 @@
             }
             .question-text {
                 font-size: 1.2rem;
+                padding-right: 2rem;
+            }
+            .speak-btn {
+                width: 28px;
+                height: 28px;
+                font-size: 0.9rem;
+                left: 8px;
             }
             .option-btn {
                 padding: 0.7rem;
@@ -547,6 +586,7 @@
         </div>
         <div class="question-container">
             <div class="question-text" id="question-text">📭 أضف أسئلتك من الأسفل أو استورد ملف JSON</div>
+            <button id="speakQuestionBtn" class="speak-btn" title="استماع للسؤال"><i class="fas fa-volume-up"></i></button>
         </div>
         <div class="options-grid" id="options-container"></div>
         <div class="feedback" id="feedback-area">✨ استخدم الأزرار أدناه لإدارة الأسئلة</div>
@@ -662,6 +702,45 @@
         else { icon.classList.remove('fa-volume-up'); icon.classList.add('fa-volume-mute'); }
     });
     document.body.addEventListener('click', () => { if(audioCtx && audioCtx.state === 'suspended') audioCtx.resume(); }, { once: true });
+    
+    // ---------- استماع للسؤال (Text-to-Speech) ----------
+    const speakBtn = document.getElementById('speakQuestionBtn');
+    let speechSynth = window.speechSynthesis;
+    let speaking = false;
+    function speakText(text) {
+        if (!speechSynth) {
+            alert("متصفحك لا يدعم خاصية تحويل النص إلى كلام.");
+            return;
+        }
+        if (speaking) {
+            speechSynth.cancel();
+            speaking = false;
+        }
+        const utterance = new SpeechSynthesisUtterance(text);
+        // محاولة ضبط اللغة تلقائياً (العربية أو الإنجليزية)
+        if (/[\u0600-\u06FF]/.test(text)) {
+            utterance.lang = 'ar-SA'; // العربية
+        } else {
+            utterance.lang = 'en-US'; // الإنجليزية
+        }
+        utterance.rate = 0.9; // سرعة مناسبة
+        utterance.pitch = 1;
+        utterance.volume = 1;
+        utterance.onstart = () => { speaking = true; };
+        utterance.onend = () => { speaking = false; };
+        utterance.onerror = () => { speaking = false; };
+        speechSynth.speak(utterance);
+    }
+    speakBtn.addEventListener('click', () => {
+        const currentQuestionText = questionTextEl.innerText;
+        if (currentQuestionText && currentQuestionText !== "📭 لا توجد أسئلة في هذه المجموعة." && currentQuestionText !== "📭 أضف أسئلتك من الأسفل أو استورد ملف JSON") {
+            speakText(currentQuestionText);
+        } else {
+            feedbackArea.innerHTML = "⚠️ لا يوجد سؤال ليتم نطقه.";
+            feedbackArea.className = "feedback wrong";
+            setTimeout(()=>{ if(feedbackArea.innerHTML.includes("نطقه")) feedbackArea.className = "feedback"; }, 2000);
+        }
+    });
     
     // =================== إدارة المجموعات (Decks) ===================
     const DECKS_STORAGE_KEY = 'flashcards_decks';
